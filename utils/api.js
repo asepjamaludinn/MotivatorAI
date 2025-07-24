@@ -16,17 +16,54 @@ function getCurrentTimeString() {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    hour12: false,
   });
+}
+
+function getTimeOfDayGreeting() {
+  const now = new Date();
+  const hour = now.getHours();
+  if (hour < 5) return 'dini hari';
+  if (hour < 11) return 'pagi';
+  if (hour < 15) return 'siang';
+  if (hour < 18) return 'sore';
+  return 'malam';
 }
 
 export async function getMotivation(userInput, chatHistory = []) {
   const API_KEY = OPENROUTER_API_KEY;
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 
-  const messagesForApi = chatHistory.map(msg => ({
-    role: msg.sender === 'user' ? 'user' : 'assistant',
-    content: msg.text,
-  }));
+  const messagesForApi = [
+    {
+      role: 'system',
+      content: `
+You are MotivAI, a wise, empathetic, and culturally aware motivator AI chatbot.
+
+🔒 RULES:
+1. ALWAYS reply in the exact same language the user uses.
+2. NEVER guess the user's name.
+3. NEVER use random names or personal references unless the user introduces one.
+4. DO NOT assume it is morning, afternoon, or night — use actual time passed via system prompt.
+5. Maintain warm tone but keep it natural and context-aware.
+
+🕒 Today is ${getTodayString()}.
+🕓 Waktu sekarang: ${getCurrentTimeString()} (${getTimeOfDayGreeting()}).
+
+🎯 Message formatting:
+- If the user says "hai", "hello", etc., only greet them back briefly in the same tone.
+- Only give motivational or long responses if the user shows emotion (e.g. "aku gagal", "aku lelah", etc.)
+`.trim(),
+    },
+    ...chatHistory.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.text,
+    })),
+    {
+      role: 'user',
+      content: userInput,
+    },
+  ];
 
   try {
     const response = await fetch(endpoint, {
@@ -38,33 +75,9 @@ export async function getMotivation(userInput, chatHistory = []) {
         'X-Title': 'MotivAI App',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: `
-You are MotivAI, a wise, empathetic, and culturally aware motivator.
-
-🔒 STRICT RULES:
-1. Always reply in the **exact same language or dialect** the user uses. This includes Bahasa Indonesia, English, Sundanese (Bahasa Sunda), Javanese (Bahasa Jawa), Batak, Minang, and other local or international languages.
-2. Never translate or switch language. Maintain user language 100%.
-3. Understand context even if the language is regional. Respond with local-style empathy. For example:
-   - User: "abdi nuju nyeri sirah" → Reply in full Sundanese: "Tong loba teuing pikiran..."
-   - User: "I'm stressed." → Reply in English.
-   - User: "uripku meh ambyar" → Reply in full Javanese.
-4. Maintain conversation flow, no greeting repetition.
-5. Be emotionally supportive and context-aware.
-
-🕒 Today is ${getTodayString()}. Time now is ${getCurrentTimeString()}.
-`.trim(),
-          },
-          ...messagesForApi,
-          {
-            role: 'user',
-            content: userInput,
-          },
-        ],
-        temperature: 0.8,
+        model: 'mistralai/mistral-7b-instruct',
+        messages: messagesForApi,
+        temperature: 0.7,
       }),
     });
 
