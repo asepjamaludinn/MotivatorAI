@@ -16,17 +16,57 @@ function getCurrentTimeString() {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    hour12: false,
   });
 }
 
-export async function getMotivation(userInput, chatHistory = []) {
+function getTimeOfDayGreeting() {
+  const now = new Date();
+  const hour = now.getHours();
+  if (hour < 5) return 'dini hari';
+  if (hour < 11) return 'pagi';
+  if (hour < 15) return 'siang';
+  if (hour < 18) return 'sore';
+  return 'malam';
+}
+
+export async function getMotivation(
+  userInput: string,
+  chatHistory: { sender: 'user' | 'assistant', text: string }[] = [],
+) {
   const API_KEY = OPENROUTER_API_KEY;
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 
-  const messagesForApi = chatHistory.map(msg => ({
-    role: msg.sender === 'user' ? 'user' : 'assistant',
-    content: msg.text,
-  }));
+  const messagesForApi = [
+    {
+      role: 'system',
+      content: `
+You are MotivAI, a wise, empathetic, and culturally aware motivator AI chatbot.
+
+🔒 RULES:
+1. ALWAYS reply in the same exact language the user uses. Mirror the language precisely (e.g., use Indonesian if user does).
+2. NEVER guess or assume user's name.
+3. NEVER use fictional names or nicknames.
+4. DO NOT assume morning/afternoon/night — use actual time via system prompt.
+5. Use natural, kind, and context-aware tone — keep it humanlike, not overly robotic.
+
+🕒 Today is ${getTodayString()}.
+🕓 Current Time: ${getCurrentTimeString()} (${getTimeOfDayGreeting()}).
+
+🗣️ Guideline:
+- If the user greets (e.g., "hi", "halo", "bonjour", etc), reply briefly in the same tone/language.
+- If user expresses emotion (e.g., "aku gagal", "saya capek", "I feel lost", etc), give motivational or empathetic response matching the language.
+`.trim(),
+    },
+    ...chatHistory.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.text,
+    })),
+    {
+      role: 'user',
+      content: userInput,
+    },
+  ];
 
   try {
     const response = await fetch(endpoint, {
@@ -38,50 +78,24 @@ export async function getMotivation(userInput, chatHistory = []) {
         'X-Title': 'MotivAI App',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: `
-You are MotivAI, a wise, empathetic, and culturally aware motivator.
-
-🔒 STRICT RULES:
-1. Always reply in the **exact same language or dialect** the user uses. This includes Bahasa Indonesia, English, Sundanese (Bahasa Sunda), Javanese (Bahasa Jawa), Batak, Minang, and other local or international languages.
-2. Never translate or switch language. Maintain user language 100%.
-3. Understand context even if the language is regional. Respond with local-style empathy. For example:
-   - User: "abdi nuju nyeri sirah" → Reply in full Sundanese: "Tong loba teuing pikiran..."
-   - User: "I'm stressed." → Reply in English.
-   - User: "uripku meh ambyar" → Reply in full Javanese.
-4. Maintain conversation flow, no greeting repetition.
-5. Be emotionally supportive and context-aware.
-
-🕒 Today is ${getTodayString()}. Time now is ${getCurrentTimeString()}.
-`.trim(),
-          },
-          ...messagesForApi,
-          {
-            role: 'user',
-            content: userInput,
-          },
-        ],
-        temperature: 0.8,
+        model: 'mistralai/mistral-7b-instruct',
+        messages: messagesForApi,
+        temperature: 0.7,
       }),
     });
 
     const data = await response.json();
-    console.log('STATUS:', response.status);
-    console.log('API RAW:', JSON.stringify(data, null, 2));
 
-    if (response.status !== 200) {
-      return (
+    if (!response.ok) {
+      const errorMessage =
         data.error?.message ||
-        'Maaf, terjadi kesalahan saat memproses permintaan.'
-      );
+        `Terjadi kesalahan (kode ${response.status}). Silakan coba lagi.`;
+      return errorMessage;
     }
 
     return data.choices?.[0]?.message?.content || 'Maaf, tidak ada balasan.';
   } catch (error) {
     console.error('API Error:', error);
-    return 'Gagal mengambil motivasi.';
+    return 'Gagal mengambil motivasi. Periksa koneksi internet atau coba lagi nanti.';
   }
 }

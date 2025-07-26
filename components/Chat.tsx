@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -18,8 +16,9 @@ import {
   useColorScheme,
 } from 'react-native';
 import { getMotivation } from '../utils/api';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-// Aktifkan LayoutAnimation untuk Android
 if (Platform.OS === 'android') {
   if (UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -117,7 +116,12 @@ export default function Chat() {
       ]}
       activeOpacity={0.7}
     >
-      {item.sender === 'ai' && <Text style={styles.avatar}>🧠</Text>}
+      {item.sender === 'ai' && (
+        <View style={styles.avatarCircle}>
+          <FontAwesome5 name="robot" size={18} color="#fff" />
+        </View>
+      )}
+
       <View
         style={[
           styles.messageBubble,
@@ -138,7 +142,12 @@ export default function Chat() {
           {item.timestamp}
         </Text>
       </View>
-      {item.sender === 'user' && <Text style={styles.avatar}>👤</Text>}
+
+      {item.sender === 'user' && (
+        <View style={[styles.avatarCircle, { backgroundColor: '#007AFF' }]}>
+          <FontAwesome5 name="user" size={18} color="#fff" />
+        </View>
+      )}
     </TouchableOpacity>
   );
 
@@ -150,13 +159,19 @@ export default function Chat() {
     >
       {messages.length === 0 && (
         <View style={styles.placeholderContainer}>
+          <MaterialIcons
+            name="auto-awesome"
+            size={18}
+            color="#999"
+            style={{ marginRight: 6 }}
+          />
           <Text
             style={[
               styles.placeholder,
               isDarkMode ? styles.placeholderDark : {},
             ]}
           >
-            Mulai ngobrol dengan AI motivator kamu ✨
+            Mulai ngobrol dengan AI motivator kamu
           </Text>
         </View>
       )}
@@ -211,7 +226,7 @@ export default function Chat() {
           ]}
           disabled={isLoading}
         >
-          <Text style={styles.sendButtonText}>Kirim</Text>
+          <FontAwesome5 name="paper-plane" size={16} color="#fff" />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -352,5 +367,14 @@ const styles = StyleSheet.create({
   },
   placeholderDark: {
     color: '#aaa',
+  },
+  avatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#888',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
   },
 });
