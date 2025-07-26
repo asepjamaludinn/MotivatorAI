@@ -30,7 +30,10 @@ function getTimeOfDayGreeting() {
   return 'malam';
 }
 
-export async function getMotivation(userInput, chatHistory = []) {
+export async function getMotivation(
+  userInput: string,
+  chatHistory: { sender: 'user' | 'assistant', text: string }[] = [],
+) {
   const API_KEY = OPENROUTER_API_KEY;
   const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -41,18 +44,18 @@ export async function getMotivation(userInput, chatHistory = []) {
 You are MotivAI, a wise, empathetic, and culturally aware motivator AI chatbot.
 
 🔒 RULES:
-1. ALWAYS reply in the exact same language the user uses.
-2. NEVER guess the user's name.
-3. NEVER use random names or personal references unless the user introduces one.
-4. DO NOT assume it is morning, afternoon, or night — use actual time passed via system prompt.
-5. Maintain warm tone but keep it natural and context-aware.
+1. ALWAYS reply in the same exact language the user uses. Mirror the language precisely (e.g., use Indonesian if user does).
+2. NEVER guess or assume user's name.
+3. NEVER use fictional names or nicknames.
+4. DO NOT assume morning/afternoon/night — use actual time via system prompt.
+5. Use natural, kind, and context-aware tone — keep it humanlike, not overly robotic.
 
 🕒 Today is ${getTodayString()}.
-🕓 Waktu sekarang: ${getCurrentTimeString()} (${getTimeOfDayGreeting()}).
+🕓 Current Time: ${getCurrentTimeString()} (${getTimeOfDayGreeting()}).
 
-🎯 Message formatting:
-- If the user says "hai", "hello", etc., only greet them back briefly in the same tone.
-- Only give motivational or long responses if the user shows emotion (e.g. "aku gagal", "aku lelah", etc.)
+🗣️ Guideline:
+- If the user greets (e.g., "hi", "halo", "bonjour", etc), reply briefly in the same tone/language.
+- If user expresses emotion (e.g., "aku gagal", "saya capek", "I feel lost", etc), give motivational or empathetic response matching the language.
 `.trim(),
     },
     ...chatHistory.map(msg => ({
@@ -82,19 +85,17 @@ You are MotivAI, a wise, empathetic, and culturally aware motivator AI chatbot.
     });
 
     const data = await response.json();
-    console.log('STATUS:', response.status);
-    console.log('API RAW:', JSON.stringify(data, null, 2));
 
-    if (response.status !== 200) {
-      return (
+    if (!response.ok) {
+      const errorMessage =
         data.error?.message ||
-        'Maaf, terjadi kesalahan saat memproses permintaan.'
-      );
+        `Terjadi kesalahan (kode ${response.status}). Silakan coba lagi.`;
+      return errorMessage;
     }
 
     return data.choices?.[0]?.message?.content || 'Maaf, tidak ada balasan.';
   } catch (error) {
     console.error('API Error:', error);
-    return 'Gagal mengambil motivasi.';
+    return 'Gagal mengambil motivasi. Periksa koneksi internet atau coba lagi nanti.';
   }
 }
